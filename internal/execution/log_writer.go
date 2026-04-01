@@ -15,6 +15,7 @@ type LogWriter struct {
 	buffer   []string
 	done     chan struct{}
 	once     sync.Once
+	wg       sync.WaitGroup
 }
 
 func NewLogWriter(flush func(lines []string) error, interval time.Duration) *LogWriter {
@@ -23,6 +24,7 @@ func NewLogWriter(flush func(lines []string) error, interval time.Duration) *Log
 		interval: interval,
 		done:     make(chan struct{}),
 	}
+	lw.wg.Add(1)
 	go lw.run()
 	return lw
 }
@@ -46,6 +48,7 @@ func (lw *LogWriter) flushNow() {
 }
 
 func (lw *LogWriter) run() {
+	defer lw.wg.Done()
 	ticker := time.NewTicker(lw.interval)
 	defer ticker.Stop()
 	for {
@@ -60,8 +63,8 @@ func (lw *LogWriter) run() {
 }
 
 // Close flushes remaining lines and stops the background goroutine.
+// Safe to call multiple times.
 func (lw *LogWriter) Close() {
 	lw.once.Do(func() { close(lw.done) })
-	// Give the goroutine time to finish final flush
-	time.Sleep(10 * time.Millisecond)
+	lw.wg.Wait()
 }

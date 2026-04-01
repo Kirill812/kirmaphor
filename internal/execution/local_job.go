@@ -52,7 +52,12 @@ func (j *LocalJob) Run(ctx context.Context, output chan<- string) error {
 	scanAndSend := func(r interface{ Read([]byte) (int, error) }) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
-			output <- scanner.Text()
+			select {
+			case output <- scanner.Text():
+			case <-ctx.Done():
+				done <- struct{}{}
+				return
+			}
 		}
 		done <- struct{}{}
 	}

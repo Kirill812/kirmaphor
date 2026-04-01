@@ -31,6 +31,27 @@ func TestTaskPoolRunsJob(t *testing.T) {
 	}
 }
 
+func TestTaskPoolStopWaitsForRunning(t *testing.T) {
+	var done atomic.Bool
+	pool := execution.NewTaskPool(2)
+	pool.Start()
+
+	pool.Enqueue(execution.TaskRequest{
+		TaskID: uuid.New(),
+		Run: func(ctx context.Context) {
+			time.Sleep(100 * time.Millisecond)
+			done.Store(true)
+		},
+	})
+
+	time.Sleep(20 * time.Millisecond) // let task start
+	pool.Stop()                        // should block until task finishes
+
+	if !done.Load() {
+		t.Fatal("Stop() returned before task completed")
+	}
+}
+
 func TestTaskPoolRespectsConcurrencyLimit(t *testing.T) {
 	var concurrent atomic.Int32
 	var maxSeen atomic.Int32

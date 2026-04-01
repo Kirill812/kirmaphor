@@ -136,7 +136,9 @@ func (s *Scheduler) process(ctx context.Context, sched *models.Schedule) error {
 
 	// Delete if one-shot
 	if sched.DeleteAfterRun {
-		queries.DeleteSchedule(ctx, s.pool, sched.ID)
+		if err := queries.DeleteSchedule(ctx, s.pool, sched.ID); err != nil {
+			log.Printf("scheduler: delete one-shot schedule %s: %v", sched.ID, err)
+		}
 	}
 
 	return nil

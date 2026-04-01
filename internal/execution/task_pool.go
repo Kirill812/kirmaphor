@@ -67,11 +67,11 @@ func (p *TaskPool) dispatch() {
 			p.wg.Add(1)
 			go func(r TaskRequest) {
 				defer func() {
-					<-p.sem // release slot
-					p.wg.Done()
 					if rec := recover(); rec != nil {
 						log.Printf("taskpool: panic in task %s: %v", r.TaskID, rec)
 					}
+					<-p.sem
+					p.wg.Done()
 				}()
 				r.Run(p.ctx)
 			}(req)

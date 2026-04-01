@@ -2,6 +2,8 @@ package scheduler_test
 
 import (
 	"testing"
+	"time"
+
 	"github.com/kgory/kirmaphor/internal/scheduler"
 )
 
@@ -25,6 +27,18 @@ func TestValidateCronFormat(t *testing.T) {
 		if err := scheduler.ValidateCronFormat(c); err == nil {
 			t.Errorf("expected %q to be invalid", c)
 		}
+	}
+}
+
+func TestIsDuePastLastRun(t *testing.T) {
+	// Every-minute cron, last run 2 minutes ago -> should be due
+	twoMinutesAgo := time.Now().Add(-2 * time.Minute)
+	isDue, err := scheduler.IsCronDue("* * * * *", &twoMinutesAgo)
+	if err != nil {
+		t.Fatalf("IsCronDue: %v", err)
+	}
+	if !isDue {
+		t.Fatal("expected cron to be due when last run 2 minutes ago")
 	}
 }
 

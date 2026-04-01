@@ -1,0 +1,25 @@
+{
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "register": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "loginFailed": "Invalid email or password",
+    "passkey": "Sign in with Passkey"
+  },
+  "nav": {
+    "projects": "Projects",
+    "settings": "Settings",
+    "profile": "Profile",
+    "runs": "Runs"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit"
+  }
+}

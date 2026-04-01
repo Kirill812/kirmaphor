@@ -1,0 +1,25 @@
+{
+  "auth": {
+    "login": "Войти",
+    "logout": "Выйти",
+    "register": "Создать аккаунт",
+    "email": "Email",
+    "password": "Пароль",
+    "loginFailed": "Неверный email или пароль",
+    "passkey": "Войти с Passkey"
+  },
+  "nav": {
+    "projects": "Проекты",
+    "settings": "Настройки",
+    "profile": "Профиль",
+    "runs": "Запуски"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "create": "Создать",
+    "edit": "Редактировать"
+  }
+}

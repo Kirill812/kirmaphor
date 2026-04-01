@@ -28,7 +28,7 @@ func CloneOrPull(gitURL, branch string, keyPEM []byte) (string, func(), error) {
 		}
 		keyCleanup = kc
 		env = append(env,
-			fmt.Sprintf("GIT_SSH_COMMAND=ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", keyPath))
+			fmt.Sprintf("GIT_SSH_COMMAND=ssh -i '%s' -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", keyPath))
 	}
 
 	args := []string{"clone", "--depth=1", "--branch", branch, gitURL, workDir}

@@ -31,8 +31,12 @@ func TestWriteKeyFileCleansUp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteKeyFile: %v", err)
 	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	info, err := os.Stat(path)
+	if err != nil {
 		t.Fatalf("key file should exist at %s", path)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Fatalf("expected 0600 permissions, got %o", info.Mode().Perm())
 	}
 	cleanup()
 	if _, err := os.Stat(path); !os.IsNotExist(err) {

@@ -5,12 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
+
+var ErrSessionNotFound = errors.New("session not found or not owned by user")
 
 func GenerateSessionToken() (token, hash string, err error) {
 	b := make([]byte, 32)
@@ -64,14 +67,27 @@ func GetSessionByTokenHash(ctx context.Context, pool *pgxpool.Pool, hash string)
 }
 
 func RevokeSession(ctx context.Context, pool *pgxpool.Pool, sessionID, userID uuid.UUID) error {
-	_, err := pool.Exec(ctx,
+	tag, err := pool.Exec(ctx,
 		`UPDATE user_sessions SET is_current = FALSE WHERE id = $1 AND user_id = $2`,
 		sessionID, userID)
-	return err
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSessionNotFound
+	}
+	return nil
 }
 
-func UpdateSecureAt(ctx context.Context, pool *pgxpool.Pool, sessionID uuid.UUID) error {
-	_, err := pool.Exec(ctx,
-		`UPDATE user_sessions SET secure_at = NOW() WHERE id = $1`, sessionID)
-	return err
+func UpdateSecureAt(ctx context.Context, pool *pgxpool.Pool, sessionID, userID uuid.UUID) error {
+	tag, err := pool.Exec(ctx,
+		`UPDATE user_sessions SET secure_at = NOW() WHERE id = $1 AND user_id = $2`,
+		sessionID, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSessionNotFound
+	}
+	return nil
 }

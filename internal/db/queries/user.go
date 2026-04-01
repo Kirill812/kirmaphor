@@ -18,7 +18,10 @@ func CreateUser(ctx context.Context, pool *pgxpool.Pool, email, displayName stri
 		email, displayName, passwordHash,
 	).Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
 		&u.Onboarded, &u.BlockedAt, &u.SessionTimeoutMinutes, &u.Settings, &u.CreatedAt)
-	return u, err
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (*models.User, error) {
@@ -29,7 +32,10 @@ func GetUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (*mod
 		 FROM users WHERE email = $1`, email,
 	).Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
 		&u.Onboarded, &u.BlockedAt, &u.SessionTimeoutMinutes, &u.Settings, &u.CreatedAt)
-	return u, err
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
 func GetUserByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models.User, error) {
@@ -40,5 +46,8 @@ func GetUserByID(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models
 		 FROM users WHERE id = $1`, id,
 	).Scan(&u.ID, &u.Email, &u.DisplayName, &u.AvatarURL, &u.PasswordHash,
 		&u.Onboarded, &u.BlockedAt, &u.SessionTimeoutMinutes, &u.Settings, &u.CreatedAt)
-	return u, err
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }

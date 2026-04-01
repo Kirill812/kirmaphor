@@ -9,7 +9,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY web/ .
 
-ARG NEXT_PUBLIC_API_URL=https://kirmaphore.kirvps.work
+ARG NEXT_PUBLIC_API_URL=https://kirmaphore.kirvps.work:8443
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build

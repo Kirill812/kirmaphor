@@ -15,10 +15,20 @@ import (
 	"github.com/kgory/kirmaphor/internal/rbac"
 )
 
-var wsUpgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true }, // TODO: restrict in production
+// NewWSUpgrader returns a WebSocket upgrader that restricts connections to
+// the given allowed origin (e.g. "http://localhost:3000"). Pass "*" to allow all
+// origins (development only).
+func NewWSUpgrader(allowedOrigin string) websocket.Upgrader {
+	return websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			if allowedOrigin == "*" {
+				return true
+			}
+			return r.Header.Get("Origin") == allowedOrigin
+		},
+	}
 }
 
 // GetLogs returns all logs for a task as JSON.
@@ -53,7 +63,7 @@ func GetLogs(pool *pgxpool.Pool) http.HandlerFunc {
 // StreamLogs upgrades to WebSocket and streams new log lines as they appear.
 // Client receives JSON: {"id": 42, "output": "PLAY [all] ***", "ts": "..."}
 // Client can reconnect by passing ?after=<last_id> query param.
-func StreamLogs(pool *pgxpool.Pool) http.HandlerFunc {
+func StreamLogs(pool *pgxpool.Pool, upgrader websocket.Upgrader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		taskID, err := uuid.Parse(r.PathValue("taskId"))
 		if err != nil {
@@ -70,7 +80,7 @@ func StreamLogs(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 
-		conn, err := wsUpgrader.Upgrade(w, r, nil)
+		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return // Upgrade writes the error
 		}

@@ -2,8 +2,10 @@ package queries
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -20,6 +22,22 @@ func CreateSecret(ctx context.Context, pool *pgxpool.Pool,
 		projectID, name, secretType, encryptedValue, nonce, createdBy,
 	).Scan(&s.ID, &s.ProjectID, &s.Name, &s.Type, &s.EncryptedValue, &s.Nonce, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func GetSecret(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models.Secret, error) {
+	s := &models.Secret{}
+	err := pool.QueryRow(ctx,
+		`SELECT id, project_id, name, type, encrypted_value, nonce, created_by, created_at, updated_at
+		 FROM secrets WHERE id = $1`, id,
+	).Scan(&s.ID, &s.ProjectID, &s.Name, &s.Type, &s.EncryptedValue, &s.Nonce,
+		&s.CreatedBy, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return s, nil

@@ -1,0 +1,17 @@
+DROP INDEX IF EXISTS idx_templates_project;
+DROP INDEX IF EXISTS idx_repositories_project;
+DROP INDEX IF EXISTS idx_inventories_project;
+DROP INDEX IF EXISTS idx_schedules_project;
+DROP INDEX IF EXISTS idx_task_logs_task;
+DROP INDEX IF EXISTS idx_tasks_status;
+DROP INDEX IF EXISTS idx_tasks_template;
+DROP INDEX IF EXISTS idx_tasks_project;
+DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS task_logs;
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS job_templates;
+ALTER TABLE inventories DROP CONSTRAINT IF EXISTS fk_inventories_repository;
+DROP TABLE IF EXISTS inventories;
+DROP TABLE IF EXISTS repositories;
+DROP TYPE IF EXISTS schedule_type;
+DROP TYPE IF EXISTS task_status;

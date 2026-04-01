@@ -6,9 +6,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/kgory/kirmaphor/internal/config"
-	"github.com/kgory/kirmaphor/internal/db"
 	"github.com/kgory/kirmaphor/internal/api"
+	"github.com/kgory/kirmaphor/internal/config"
+	"github.com/kgory/kirmaphor/internal/crypto"
+	"github.com/kgory/kirmaphor/internal/db"
+	"github.com/kgory/kirmaphor/internal/execution"
 )
 
 func main() {
@@ -27,7 +29,23 @@ func main() {
 		log.Fatalf("migrations: %v", err)
 	}
 
-	router := api.NewRouter(cfg, pool)
+	masterKey, err := crypto.LoadMasterKey(cfg.MasterKey)
+	if err != nil {
+		log.Fatalf("master key: %v", err)
+	}
+
+	taskPool := execution.NewTaskPool(10)
+	taskPool.Start()
+	defer taskPool.Stop()
+
+	deps := execution.RunnerDeps{
+		Pool: pool,
+		Decrypt: func(encrypted, nonce []byte) ([]byte, error) {
+			return crypto.Decrypt(masterKey, encrypted, nonce)
+		},
+	}
+
+	router := api.NewRouter(cfg, pool, taskPool, deps)
 	log.Printf("starting on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
 }

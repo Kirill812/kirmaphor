@@ -15,9 +15,10 @@ import (
 	"github.com/kgory/kirmaphor/internal/auth"
 	"github.com/kgory/kirmaphor/internal/config"
 	"github.com/kgory/kirmaphor/internal/crypto"
+	"github.com/kgory/kirmaphor/internal/execution"
 )
 
-func NewRouter(cfg *config.Config, pool *pgxpool.Pool) http.Handler {
+func NewRouter(cfg *config.Config, pool *pgxpool.Pool, taskPool *execution.TaskPool, deps execution.RunnerDeps) http.Handler {
 	wa, err := auth.NewWebAuthn(cfg)
 	if err != nil {
 		panic(fmt.Sprintf("failed to init webauthn: %v", err))
@@ -73,6 +74,27 @@ func NewRouter(cfg *config.Config, pool *pgxpool.Pool) http.Handler {
 
 			r.Post("/projects/{projectId}/secrets", handlers.CreateSecret(pool, masterKey))
 			r.Get("/projects/{projectId}/secrets", handlers.ListSecrets(pool))
+
+			// Template routes
+			r.Get("/projects/{projectId}/templates", handlers.ListTemplates(pool))
+			r.Post("/projects/{projectId}/templates", handlers.CreateTemplate(pool))
+			r.Get("/projects/{projectId}/templates/{templateId}", handlers.GetTemplate(pool))
+			r.Delete("/projects/{projectId}/templates/{templateId}", handlers.DeleteTemplate(pool))
+
+			// Task routes
+			r.Post("/projects/{projectId}/run", handlers.RunTemplate(pool, taskPool, deps))
+			r.Get("/projects/{projectId}/tasks", handlers.ListTasks(pool))
+			r.Get("/tasks/{taskId}", handlers.GetTask(pool))
+
+			// Inventory routes
+			r.Get("/projects/{projectId}/inventories", handlers.ListInventories(pool))
+			r.Post("/projects/{projectId}/inventories", handlers.CreateInventory(pool))
+			r.Delete("/projects/{projectId}/inventories/{inventoryId}", handlers.DeleteInventory(pool))
+
+			// Repository routes
+			r.Get("/projects/{projectId}/repositories", handlers.ListRepositories(pool))
+			r.Post("/projects/{projectId}/repositories", handlers.CreateRepository(pool))
+			r.Delete("/projects/{projectId}/repositories/{repoId}", handlers.DeleteRepository(pool))
 		})
 	})
 

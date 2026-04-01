@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/kgory/kirmaphor/internal/db/models"
+	"github.com/kgory/kirmaphor/internal/rbac"
 )
 
 type contextKey string
@@ -42,4 +43,14 @@ func GetUser(r *http.Request) *models.User {
 func GetSession(r *http.Request) *models.UserSession {
 	s, _ := r.Context().Value(CtxSession).(*models.UserSession)
 	return s
+}
+
+func GetProject(r *http.Request) *models.Project {
+	p, _ := r.Context().Value(CtxProject).(*models.Project)
+	return p
+}
+
+func GetRole(r *http.Request) rbac.Role {
+	role, _ := r.Context().Value(CtxRole).(rbac.Role)
+	return role
 }

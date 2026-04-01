@@ -85,6 +85,8 @@ func NewRouter(cfg *config.Config, pool *pgxpool.Pool, taskPool *execution.TaskP
 			r.Post("/projects/{projectId}/run", handlers.RunTemplate(pool, taskPool, deps))
 			r.Get("/projects/{projectId}/tasks", handlers.ListTasks(pool))
 			r.Get("/tasks/{taskId}", handlers.GetTask(pool))
+			r.Get("/tasks/{taskId}/logs", handlers.GetLogs(pool))
+			r.Get("/tasks/{taskId}/logs/stream", handlers.StreamLogs(pool))
 
 			// Inventory routes
 			r.Get("/projects/{projectId}/inventories", handlers.ListInventories(pool))

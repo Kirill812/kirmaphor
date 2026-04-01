@@ -95,12 +95,20 @@ CREATE TABLE schedules (
     created_by          UUID NOT NULL REFERENCES users(id),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_run_at         TIMESTAMPTZ,
-    UNIQUE(project_id, name)
+    UNIQUE(project_id, name),
+    CHECK (
+        (type = 'cron'   AND cron_format IS NOT NULL) OR
+        (type = 'run_at' AND run_at IS NOT NULL)
+    )
 );
+
+-- Add FK from tasks to schedules now that schedules exists
+ALTER TABLE tasks ADD CONSTRAINT fk_tasks_schedule
+    FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE SET NULL;
 
 CREATE INDEX idx_tasks_project        ON tasks(project_id);
 CREATE INDEX idx_tasks_template       ON tasks(template_id);
-CREATE INDEX idx_tasks_status         ON tasks(status);
+CREATE INDEX idx_tasks_project_status ON tasks(project_id, status);
 CREATE INDEX idx_task_logs_task       ON task_logs(task_id);
 CREATE INDEX idx_schedules_project    ON schedules(project_id);
 CREATE INDEX idx_inventories_project  ON inventories(project_id);

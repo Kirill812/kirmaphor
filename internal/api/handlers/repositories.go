@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -92,7 +93,11 @@ func DeleteRepository(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		if err := queries.DeleteRepository(r.Context(), pool, id, projectID); err != nil {
-			helpers.WriteError(w, http.StatusNotFound, "repository not found")
+			if errors.Is(err, queries.ErrNotFound) {
+				helpers.WriteError(w, http.StatusNotFound, "repository not found")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
 			return
 		}
 		helpers.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})

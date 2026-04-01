@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -84,14 +85,27 @@ func CreateTemplate(pool *pgxpool.Pool) http.HandlerFunc {
 
 func GetTemplate(pool *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		projectID, err := uuid.Parse(r.PathValue("projectId"))
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "invalid project id")
+			return
+		}
 		id, err := uuid.Parse(r.PathValue("templateId"))
 		if err != nil {
 			helpers.WriteError(w, http.StatusBadRequest, "invalid template id")
 			return
 		}
+		if !hasProjectAccess(r.Context(), pool, projectID, helpers.GetUser(r).ID, rbac.PermReadLogs) {
+			helpers.WriteError(w, http.StatusForbidden, "forbidden")
+			return
+		}
 		t, err := queries.GetTemplate(r.Context(), pool, id)
 		if err != nil {
 			helpers.WriteError(w, http.StatusNotFound, "template not found")
+			return
+		}
+		if t.ProjectID != projectID {
+			helpers.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 		helpers.WriteJSON(w, http.StatusOK, t)
@@ -112,7 +126,11 @@ func DeleteTemplate(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		if err := queries.DeleteTemplate(r.Context(), pool, id, projectID); err != nil {
-			helpers.WriteError(w, http.StatusNotFound, "template not found")
+			if errors.Is(err, queries.ErrNotFound) {
+				helpers.WriteError(w, http.StatusNotFound, "template not found")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
 			return
 		}
 		helpers.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})

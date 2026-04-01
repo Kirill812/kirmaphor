@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -93,7 +94,11 @@ func DeleteInventory(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		if err := queries.DeleteInventory(r.Context(), pool, id, projectID); err != nil {
-			helpers.WriteError(w, http.StatusNotFound, "inventory not found")
+			if errors.Is(err, queries.ErrNotFound) {
+				helpers.WriteError(w, http.StatusNotFound, "inventory not found")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
 			return
 		}
 		helpers.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})

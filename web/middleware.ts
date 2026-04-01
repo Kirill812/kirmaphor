@@ -1,9 +1,9 @@
-// web/proxy.ts
+// web/middleware.ts
 import { NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register']
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const token = req.cookies.get('kirmaphore_token')?.value
   const isPublic = PUBLIC_PATHS.some(p => req.nextUrl.pathname.startsWith(p))
 

@@ -124,6 +124,9 @@ first_seen_at, last_seen_at
 | `admin` | Manage projects, users, secrets |
 | `engineer` | Run jobs, edit playbooks |
 | `viewer` | Read-only: logs and dashboard |
+| Custom roles (Enterprise) | Granular permission sets via Role Constructor |
+
+**Role Constructor (Enterprise):** Visual editor for creating custom roles with granular permission toggles per resource type (projects, inventories, secrets, playbooks, runners, cloud credentials). Supports role inheritance and per-project scope overrides.
 
 ### Authentication Methods
 
@@ -261,6 +264,7 @@ Autonomous agent with full platform context access — not a chatbot.
 | External Secrets (Vault/KMS) | ❌ | ✅ |
 | MFA enforce policy | ❌ | ✅ |
 | Secure session | ❌ | ✅ |
+| Role Constructor (custom roles) | ❌ | ✅ |
 | SLA + support | ❌ | ✅ |
 
 ---
@@ -282,7 +286,86 @@ Minimum viable product to validate core value proposition:
 
 ---
 
-## 9. Research: Semaphore Gaps (input data)
+## 9. Semaphore Implementation References
+
+**Principle:** Where Semaphore has battle-tested implementation, adopt patterns directly. Build on proven foundations, not from scratch.
+
+### Execution Engine → adopt from `services/tasks/`
+
+- **TaskPool** (`TaskPool.go`): channel-based queue (`register`, `logger` 10K buffer, `queueEvents` pub/sub). Use this model directly — not goroutine-per-task.
+- **TaskRunner** (`TaskRunner.go`): wraps Task + Template + Inventory + Repository + Environment together. Job interface: `Run(username, version, alias) error`, `Kill()`, `IsKilled()`.
+- **Pluggable state stores**: `TaskStateStore` interface — memory for single-node, Redis for HA.
+- **Batch DB writes**: 500 log records per 500ms write cycle — adopt for Kirmaphore log persistence.
+
+### Database Models → adopt from `db/`
+
+Reuse schema patterns from Semaphore directly (adapted to PostgreSQL):
+
+```
+Task       — ID, TemplateID, ProjectID, Status, RunnerID, Playbook,
+             GitBranch, CommitHash, InventoryID, Params (JSONB)
+Schedule   — CronFormat, RunAt, Active, DeleteAfterRun, TaskParamsID
+Inventory  — Type (static|static-yaml|file|cloud-source), SSHKeyID
+Runner     — Token, Tag, MaxParallelTasks, Touched (heartbeat)
+AccessKey  — Type (ssh|login_password|string), StorageID, SourceStorageType
+Repository — GitURL, GitBranch, SSHKeyID, Type (git|ssh|https|file|local)
+```
+
+### Secrets Architecture → adopt from `services/server/access_key_encryption_svc.go`
+
+Strategy pattern for storage backends — adopt directly:
+- `LocalAccessKeyDeserializer` — encrypted at rest in DB
+- `VaultAccessKeyDeserializer` — HashiCorp Vault
+- Extend with: AWS KMS, Azure Key Vault, GCP Secret Manager
+
+### Git Integration → adopt from `db/Repository.go`
+
+- Per-repo SSH key (AccessKey) reference
+- Per-task GitBranch override
+- CommitHash stored in Task after checkout
+- Support: SSH, HTTPS, local paths
+
+### Scheduling → adopt from `services/schedules/`
+
+- Cron + run_at types
+- `ValidateCronFormat()` utility
+- SchedulePool with refresh on update
+- `DeleteAfterRun` flag
+
+### API Patterns → adopt from `api/`
+
+```go
+// Middleware chain — adopt directly
+ProjectMiddleware → load project → resolve role → check permissions → context
+
+// Helpers — adopt directly
+helpers.GetFromContext(r, key)
+helpers.GetIntParam("id", w, r)
+helpers.WriteJSON(w, status, obj)
+helpers.Bind(w, r, &obj)
+```
+
+### Notifications → adopt from `services/tasks/alert.go`
+
+- `embed.FS` template-driven email alerts
+- Chat hooks pattern (Slack/Telegram/Teams) — extend with Forge AI summaries
+- Per-user alert preferences on User model
+
+### What Kirmaphore adds ON TOP of these patterns
+
+| Semaphore foundation | Kirmaphore addition |
+|---|---|
+| TaskPool + TaskRunner | Forge AI hooks into task lifecycle (on_failure analysis) |
+| AccessKey storage | + Two-layer client+server encryption (from PostCash) |
+| Static/file inventories | + Native AWS/Azure/GCP dynamic sources |
+| Basic permissions | + Role Constructor, org/team scoping |
+| Session/local auth | + Passkeys (WebAuthn), OIDC, SAML |
+| Template-driven notifications | + Workflow Webhook nodes, per-task NL summaries from Forge |
+| Cron scheduling | + Visual Workflow DAG with branching |
+
+---
+
+## 10. Research: Semaphore Gaps (input data)
 
 Top user requests from semaphoreui/semaphore that Kirmaphore addresses:
 

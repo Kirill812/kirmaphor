@@ -4,12 +4,18 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 )
 
+// ErrDecryptFailed is returned when decryption fails due to wrong key,
+// tampered ciphertext, or incorrect nonce. Callers can check with errors.Is.
+var ErrDecryptFailed = errors.New("decryption failed: authentication tag mismatch")
+
 // Encrypt encrypts plaintext with AES-256-GCM using key (32 bytes).
-// Returns (ciphertext, nonce, error). Nonce is stored separately.
+// Returns (ciphertext, nonce, error). Both ciphertext and nonce MUST be
+// stored together — decryption requires both values.
 func Encrypt(key, plaintext []byte) (ciphertext, nonce []byte, err error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -21,13 +27,14 @@ func Encrypt(key, plaintext []byte) (ciphertext, nonce []byte, err error) {
 	}
 	nonce = make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, nil, fmt.Errorf("nonce: %w", err)
+		return nil, nil, fmt.Errorf("nonce generation: %w", err)
 	}
 	ciphertext = gcm.Seal(nil, nonce, plaintext, nil)
 	return ciphertext, nonce, nil
 }
 
 // Decrypt decrypts ciphertext with AES-256-GCM using key and nonce.
+// Returns ErrDecryptFailed if the key is wrong or the ciphertext was tampered.
 func Decrypt(key, ciphertext, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -39,7 +46,7 @@ func Decrypt(key, ciphertext, nonce []byte) ([]byte, error) {
 	}
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		return nil, fmt.Errorf("decrypt: %w", err)
+		return nil, ErrDecryptFailed
 	}
 	return plaintext, nil
 }

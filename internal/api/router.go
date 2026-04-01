@@ -3,9 +3,11 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/api/handlers"
 	"github.com/kgory/kirmaphor/internal/api/helpers"
@@ -32,6 +34,13 @@ func NewRouter(cfg *config.Config, pool *pgxpool.Pool) http.Handler {
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
 	r.Use(chiMiddleware.RealIP)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", getEnvOrDefault("ALLOWED_ORIGIN", "http://localhost:3000")},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
 
 	requireAuth := apiMiddleware.RequireAuth(pool)
 
@@ -68,4 +77,11 @@ func NewRouter(cfg *config.Config, pool *pgxpool.Pool) http.Handler {
 	})
 
 	return r
+}
+
+func getEnvOrDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }

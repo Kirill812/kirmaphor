@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/api/helpers"
 	"github.com/kgory/kirmaphor/internal/auth"
@@ -27,7 +29,15 @@ func CreateSecret(pool *pgxpool.Pool, masterKey []byte) http.HandlerFunc {
 		}
 		user := helpers.GetUser(r)
 		role, err := queries.GetProjectRole(r.Context(), pool, projectID, user.ID)
-		if err != nil || !rbac.HasPermission(role, rbac.PermManageSecrets) {
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				helpers.WriteError(w, http.StatusForbidden, "forbidden")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
+			return
+		}
+		if !rbac.HasPermission(role, rbac.PermManageSecrets) {
 			helpers.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}
@@ -69,7 +79,15 @@ func ListSecrets(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		user := helpers.GetUser(r)
 		role, err := queries.GetProjectRole(r.Context(), pool, projectID, user.ID)
-		if err != nil || !rbac.HasPermission(role, rbac.PermReadLogs) {
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				helpers.WriteError(w, http.StatusForbidden, "forbidden")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
+			return
+		}
+		if !rbac.HasPermission(role, rbac.PermReadLogs) {
 			helpers.WriteError(w, http.StatusForbidden, "forbidden")
 			return
 		}

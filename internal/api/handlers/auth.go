@@ -14,21 +14,45 @@ import (
 	"github.com/kgory/kirmaphor/internal/db/queries"
 )
 
+type challengeEntry struct {
+	data      *webauthn.SessionData
+	createdAt time.Time
+}
+
 // AuthHandler handles authentication endpoints.
 type AuthHandler struct {
 	pool       *pgxpool.Pool
 	wa         *webauthn.WebAuthn
 	masterKey  []byte
 	mu         sync.Mutex
-	challenges map[string]*webauthn.SessionData // userID -> challenge (in-memory, replace with Redis in prod)
+	challenges map[string]*challengeEntry // userID -> challenge (in-memory, replace with Redis in prod)
 }
 
 func NewAuthHandler(pool *pgxpool.Pool, wa *webauthn.WebAuthn, masterKey []byte) *AuthHandler {
-	return &AuthHandler{
+	h := &AuthHandler{
 		pool:       pool,
 		wa:         wa,
 		masterKey:  masterKey,
-		challenges: make(map[string]*webauthn.SessionData),
+		challenges: make(map[string]*challengeEntry),
+	}
+	go h.cleanupChallenges()
+	return h
+}
+
+const challengeTTL = 5 * time.Minute
+
+func (h *AuthHandler) cleanupChallenges() {
+	ticker := time.NewTicker(challengeTTL)
+	defer ticker.Stop()
+	for range ticker.C {
+		cutoff := time.Now().Add(-challengeTTL)
+		h.mu.Lock()
+		for k, v := range h.challenges {
+			if v.createdAt.Before(cutoff) {
+				delete(h.challenges, k)
+			}
+		}
+		h.mu.Unlock()
 	}
 }
 
@@ -149,7 +173,7 @@ func (h *AuthHandler) PasskeyRegisterBegin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.mu.Lock()
-	h.challenges[user.ID.String()] = sessionData
+	h.challenges[user.ID.String()] = &challengeEntry{data: sessionData, createdAt: time.Now()}
 	h.mu.Unlock()
 	helpers.WriteJSON(w, http.StatusOK, options)
 }
@@ -162,12 +186,13 @@ func (h *AuthHandler) PasskeyRegisterFinish(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	h.mu.Lock()
-	sessionData := h.challenges[user.ID.String()]
+	entry := h.challenges[user.ID.String()]
 	h.mu.Unlock()
-	if sessionData == nil {
+	if entry == nil {
 		helpers.WriteError(w, http.StatusBadRequest, "no pending registration")
 		return
 	}
+	sessionData := entry.data
 	wu := &webauthnUser{user: user}
 	credential, err := h.wa.FinishRegistration(wu, *sessionData, r)
 	if err != nil {
@@ -238,7 +263,7 @@ func (h *AuthHandler) PasskeyLoginBegin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	h.mu.Lock()
-	h.challenges[user.ID.String()] = sessionData
+	h.challenges[user.ID.String()] = &challengeEntry{data: sessionData, createdAt: time.Now()}
 	h.mu.Unlock()
 	helpers.WriteJSON(w, http.StatusOK, options)
 }
@@ -256,12 +281,13 @@ func (h *AuthHandler) PasskeyLoginFinish(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	h.mu.Lock()
-	sessionData := h.challenges[user.ID.String()]
+	loginEntry := h.challenges[user.ID.String()]
 	h.mu.Unlock()
-	if sessionData == nil {
+	if loginEntry == nil {
 		helpers.WriteError(w, http.StatusBadRequest, "no pending login")
 		return
 	}
+	sessionData := loginEntry.data
 	dbCreds, _ := queries.GetPasskeyCredentialsByUserID(r.Context(), h.pool, user.ID)
 	waCreds := make([]webauthn.Credential, len(dbCreds))
 	for i, c := range dbCreds {

@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/api/helpers"
 	"github.com/kgory/kirmaphor/internal/db/models"
@@ -58,7 +60,11 @@ func GetProject(pool *pgxpool.Pool) http.HandlerFunc {
 		}
 		role, err := queries.GetProjectRole(r.Context(), pool, id, user.ID)
 		if err != nil {
-			helpers.WriteError(w, http.StatusNotFound, "project not found or access denied")
+			if errors.Is(err, pgx.ErrNoRows) {
+				helpers.WriteError(w, http.StatusForbidden, "forbidden")
+			} else {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			}
 			return
 		}
 		p, err := queries.GetProjectByID(r.Context(), pool, id)

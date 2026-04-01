@@ -57,12 +57,17 @@ func ListSessions(pool *pgxpool.Pool) http.HandlerFunc {
 			return
 		}
 		defer rows.Close()
-		var sessions []map[string]any
+		sessions := make([]map[string]any, 0)
 		for rows.Next() {
-			var id, deviceLabel, ipAddress any
-			var isCurrent bool
-			var expiresAt, createdAt any
-			rows.Scan(&id, &deviceLabel, &ipAddress, &isCurrent, &expiresAt, &createdAt)
+			var (
+				id, deviceLabel, ipAddress any
+				isCurrent                  bool
+				expiresAt, createdAt       any
+			)
+			if err := rows.Scan(&id, &deviceLabel, &ipAddress, &isCurrent, &expiresAt, &createdAt); err != nil {
+				helpers.WriteError(w, http.StatusInternalServerError, "server error")
+				return
+			}
 			sessions = append(sessions, map[string]any{
 				"id":           id,
 				"device_label": deviceLabel,
@@ -71,8 +76,9 @@ func ListSessions(pool *pgxpool.Pool) http.HandlerFunc {
 				"expires_at":   expiresAt,
 			})
 		}
-		if sessions == nil {
-			sessions = []map[string]any{}
+		if err := rows.Err(); err != nil {
+			helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			return
 		}
 		helpers.WriteJSON(w, http.StatusOK, sessions)
 	}

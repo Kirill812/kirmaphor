@@ -1,7 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 CREATE TABLE users (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email           TEXT NOT NULL UNIQUE,
     display_name    TEXT NOT NULL,
     avatar_url      TEXT,
@@ -14,7 +12,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE passkey_credentials (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     credential_id   BYTEA NOT NULL UNIQUE,
     public_key      BYTEA NOT NULL,
@@ -26,7 +24,7 @@ CREATE TABLE passkey_credentials (
 );
 
 CREATE TABLE user_sessions (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_token_hash  TEXT NOT NULL UNIQUE,
     device_fingerprint  TEXT,
@@ -42,7 +40,7 @@ CREATE TABLE user_sessions (
 );
 
 CREATE TABLE user_known_devices (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_fingerprint  TEXT NOT NULL,
     device_label        TEXT NOT NULL DEFAULT 'Unknown device',

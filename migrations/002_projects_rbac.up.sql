@@ -1,7 +1,7 @@
 CREATE TYPE user_role AS ENUM ('owner', 'admin', 'engineer', 'viewer');
 
 CREATE TABLE projects (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name        TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     created_by  UUID NOT NULL REFERENCES users(id),

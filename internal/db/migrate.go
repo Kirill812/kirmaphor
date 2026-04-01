@@ -6,8 +6,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func RunMigrations(dbURL string) error {
-	m, err := migrate.New("file://migrations", dbURL)
+func RunMigrations(dbURL, migrationsPath string) error {
+	m, err := migrate.New("file://"+migrationsPath, dbURL)
 	if err != nil {
 		return err
 	}

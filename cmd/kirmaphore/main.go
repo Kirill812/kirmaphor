@@ -23,7 +23,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	if err := db.RunMigrations(cfg.DBURL); err != nil {
+	if err := db.RunMigrations(cfg.DBURL, "migrations"); err != nil {
 		log.Fatalf("migrations: %v", err)
 	}
 

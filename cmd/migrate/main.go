@@ -14,7 +14,7 @@ func main() {
 		url = "postgres://kirmaphore:kirmaphore@localhost:5432/kirmaphore?sslmode=disable"
 	}
 	fmt.Println("Running migrations against:", url)
-	if err := db.RunMigrations(url); err != nil {
+	if err := db.RunMigrations(url, "migrations"); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
 	fmt.Println("Migrations applied successfully.")

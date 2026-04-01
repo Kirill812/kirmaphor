@@ -11,6 +11,7 @@ func Connect(ctx context.Context, url string) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
 		return nil, err
 	}
 	return pool, nil

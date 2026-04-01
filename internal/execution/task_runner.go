@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -127,7 +128,10 @@ func RunTask(ctx context.Context, deps RunnerDeps, task *models.Task) {
 	job := NewLocalJob(task.Playbook, invFilePath, workDir, extraArgs, extraEnv)
 	output := make(chan string, 100)
 
+	var drainWg sync.WaitGroup
+	drainWg.Add(1)
 	go func() {
+		defer drainWg.Done()
 		for line := range output {
 			logWriter.Write(line)
 		}
@@ -135,6 +139,7 @@ func RunTask(ctx context.Context, deps RunnerDeps, task *models.Task) {
 
 	runErr := job.Run(ctx, output)
 	close(output)
+	drainWg.Wait() // ensure all lines are written to logWriter before Close() fires
 
 	// 5. Final status
 	if job.IsKilled() {

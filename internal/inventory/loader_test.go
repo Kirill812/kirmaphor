@@ -41,3 +41,25 @@ func TestLoadStaticInventoryNilData(t *testing.T) {
 		t.Fatal("expected error for nil inventory data")
 	}
 }
+
+func TestLoadUnsupportedType(t *testing.T) {
+	inv := &models.Inventory{
+		Type: models.InventoryTypeAWSEC2,
+	}
+	_, _, err := inventory.Load(inv)
+	if err == nil {
+		t.Fatal("expected error for unsupported inventory type")
+	}
+}
+
+func TestLoadStaticInventoryEmptyData(t *testing.T) {
+	empty := ""
+	inv := &models.Inventory{
+		Type:          models.InventoryTypeStatic,
+		InventoryData: &empty,
+	}
+	_, _, err := inventory.Load(inv)
+	if err == nil {
+		t.Fatal("expected error for empty inventory data")
+	}
+}

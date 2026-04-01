@@ -2,8 +2,10 @@ package queries
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -33,6 +35,9 @@ func GetInventory(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*model
 	).Scan(&inv.ID, &inv.ProjectID, &inv.Name, &inv.Type, &inv.InventoryData,
 		&inv.RepositoryID, &inv.InventoryPath, &inv.SSHKeyID, &inv.CreatedBy, &inv.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return inv, nil
@@ -59,6 +64,12 @@ func ListInventories(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UUI
 }
 
 func DeleteInventory(ctx context.Context, pool *pgxpool.Pool, id, projectID uuid.UUID) error {
-	_, err := pool.Exec(ctx, `DELETE FROM inventories WHERE id = $1 AND project_id = $2`, id, projectID)
-	return err
+	tag, err := pool.Exec(ctx, `DELETE FROM inventories WHERE id = $1 AND project_id = $2`, id, projectID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

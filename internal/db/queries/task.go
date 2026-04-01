@@ -2,8 +2,10 @@ package queries
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -42,6 +44,9 @@ func GetTask(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models.Tas
 		&t.Arguments, &t.Environment, &t.CreatedBy, &t.ScheduleID,
 		&t.CreatedAt, &t.StartedAt, &t.FinishedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return t, nil

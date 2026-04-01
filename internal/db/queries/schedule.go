@@ -2,9 +2,11 @@ package queries
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -37,6 +39,9 @@ func GetSchedule(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models
 	).Scan(&s.ID, &s.ProjectID, &s.TemplateID, &s.Name, &s.Type, &s.CronFormat,
 		&s.RunAt, &s.Active, &s.DeleteAfterRun, &s.CreatedBy, &s.CreatedAt, &s.LastRunAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return s, nil
@@ -64,6 +69,11 @@ func ListSchedules(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UUID)
 	return schedules, rows.Err()
 }
 
+// GetDueSchedules returns active schedules that may need to run.
+// For 'cron' type, all active cron schedules are returned — the caller
+// (scheduler) is responsible for evaluating the cron expression against
+// last_run_at to decide whether to fire. For 'run_at' type, only schedules
+// whose run_at <= NOW() are returned.
 func GetDueSchedules(ctx context.Context, pool *pgxpool.Pool) ([]*models.Schedule, error) {
 	rows, err := pool.Query(ctx,
 		`SELECT id, project_id, template_id, name, type, cron_format, run_at,
@@ -98,6 +108,12 @@ func TouchSchedule(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID, lastRu
 }
 
 func DeleteSchedule(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) error {
-	_, err := pool.Exec(ctx, `DELETE FROM schedules WHERE id = $1`, id)
-	return err
+	tag, err := pool.Exec(ctx, `DELETE FROM schedules WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

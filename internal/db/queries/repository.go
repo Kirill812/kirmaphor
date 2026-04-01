@@ -2,8 +2,10 @@ package queries
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -30,6 +32,9 @@ func GetRepository(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*mode
 		 FROM repositories WHERE id = $1`, id,
 	).Scan(&r.ID, &r.ProjectID, &r.Name, &r.GitURL, &r.GitBranch, &r.SSHKeyID, &r.CreatedBy, &r.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return r, nil
@@ -56,6 +61,12 @@ func ListRepositories(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UU
 }
 
 func DeleteRepository(ctx context.Context, pool *pgxpool.Pool, id, projectID uuid.UUID) error {
-	_, err := pool.Exec(ctx, `DELETE FROM repositories WHERE id = $1 AND project_id = $2`, id, projectID)
-	return err
+	tag, err := pool.Exec(ctx, `DELETE FROM repositories WHERE id = $1 AND project_id = $2`, id, projectID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

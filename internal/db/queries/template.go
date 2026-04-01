@@ -2,8 +2,10 @@ package queries
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/db/models"
 )
@@ -38,6 +40,9 @@ func GetTemplate(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models
 		&t.InventoryID, &t.RepositoryID, &t.Environment, &t.Arguments,
 		&t.CreatedBy, &t.CreatedAt)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return t, nil

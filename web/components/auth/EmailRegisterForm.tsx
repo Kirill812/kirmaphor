@@ -37,7 +37,7 @@ export default function EmailRegisterForm({ onSwitchToPasskey }: Props) {
         password,
       })
       setUser(res.user, res.token)
-      router.push('/')
+      router.push('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {

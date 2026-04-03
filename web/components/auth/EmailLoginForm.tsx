@@ -23,7 +23,7 @@ export default function EmailLoginForm({ onSwitchToPasskey }: Props) {
     setError('')
     try {
       await login(email, password)
-      router.push('/')
+      router.push('/dashboard')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
     } finally {

@@ -25,7 +25,7 @@ export default function PasskeyRegisterForm({ onSwitchToEmail }: Props) {
       const credential = await startRegistration({ optionsJSON: options as never })
       const res = await api.post<{ token: string; user: AuthUser }>('/api/auth/passkey/register/finish', credential)
       setUser(res.user, res.token)
-      router.push('/')
+      router.push('/dashboard')
     } catch {
       setError('Passkey failed — try email instead')
     } finally {

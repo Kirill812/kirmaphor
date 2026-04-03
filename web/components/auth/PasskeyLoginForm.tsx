@@ -25,7 +25,7 @@ export default function PasskeyLoginForm({ onSwitchToEmail }: Props) {
       const credential = await startAuthentication({ optionsJSON: options as never })
       const res = await api.post<{ token: string; user: AuthUser }>('/api/auth/passkey/login/finish', credential)
       setUser(res.user, res.token)
-      router.push('/')
+      router.push('/dashboard')
     } catch {
       setError('Passkey failed — try email instead')
     } finally {

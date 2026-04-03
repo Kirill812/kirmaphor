@@ -1,64 +1,40 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth-store'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+import PasskeyLoginForm from '@/components/auth/PasskeyLoginForm'
+import EmailLoginForm from '@/components/auth/EmailLoginForm'
+import AuthDivider from '@/components/auth/AuthDivider'
+
+type View = 'passkey' | 'email'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
-  const router = useRouter()
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    try {
-      await login(email, password)
-      router.push('/')
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [view, setView] = useState<View>('passkey')
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Kirmaphore</CardTitle>
-          <p className="text-sm text-muted-foreground">Sign in to your account</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-            />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      {/* Heading */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold text-white">Welcome back</h1>
+        <p className="text-sm text-gray-400">Sign in to your account</p>
+      </div>
+
+      {view === 'passkey' ? (
+        <>
+          <PasskeyLoginForm onSwitchToEmail={() => setView('email')} />
+          <AuthDivider />
+        </>
+      ) : (
+        <EmailLoginForm onSwitchToPasskey={() => setView('passkey')} />
+      )}
+
+      {/* Bottom link */}
+      <p className="text-sm text-gray-400 text-center">
+        Don&apos;t have an account?{' '}
+        <Link href="/register" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+          Create one →
+        </Link>
+      </p>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -471,6 +472,7 @@ func (h *AuthHandler) PasskeyLoginFinish(w http.ResponseWriter, r *http.Request)
 			return &webauthnUser{user: u, creds: waCreds}, nil
 		}, *entry.data, r)
 		if err != nil {
+			log.Printf("FinishPasskeyLogin error: %v", err)
 			helpers.WriteError(w, http.StatusUnauthorized, "passkey verification failed: "+err.Error())
 			return
 		}

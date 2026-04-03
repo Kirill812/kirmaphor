@@ -25,10 +25,10 @@ services:
     environment:
       DATABASE_URL: postgres://kirmaphore:${POSTGRES_PASSWORD}@postgres:5432/kirmaphore?sslmode=disable
       MASTER_KEY: ${MASTER_KEY}
-      RP_ORIGIN: https://kirmaphore.kirvps.work:8443
+      RP_ORIGIN: https://kirmaphore.kirvps.work
       RP_ID: kirmaphore.kirvps.work
       RP_NAME: Kirmaphore
-      ALLOWED_ORIGIN: https://kirmaphore.kirvps.work:8443
+      ALLOWED_ORIGIN: https://kirmaphore.kirvps.work
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
       context: .
       dockerfile: Dockerfile.web
       args:
-        NEXT_PUBLIC_API_URL: https://kirmaphore.kirvps.work:8443
+        NEXT_PUBLIC_API_URL: https://kirmaphore.kirvps.work
     container_name: kirmaphore-web
     restart: unless-stopped
     networks:

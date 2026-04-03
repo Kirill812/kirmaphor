@@ -28,11 +28,11 @@ export default function PasskeyRegisterForm({ onSwitchToEmail }: Props) {
     setLoading(true)
     setError('')
     try {
-      const res = await api.post<{ pending_id: string; options: Record<string, unknown> }>(
+      const res = await api.post<{ pending_id: string; options: { publicKey: Record<string, unknown> } }>(
         '/api/auth/passkey/register/begin',
         { email, display_name: displayName },
       )
-      const credential = await startRegistration({ optionsJSON: res.options as never })
+      const credential = await startRegistration({ optionsJSON: res.options.publicKey as never })
       const authRes = await api.post<{ token: string; user: AuthUser }>(
         `/api/auth/passkey/register/finish?pending_id=${encodeURIComponent(res.pending_id)}`,
         credential,

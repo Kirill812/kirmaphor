@@ -39,8 +39,8 @@ export default function PasskeyRegisterForm({ onSwitchToEmail }: Props) {
       )
       setUser(authRes.user, authRes.token)
       router.push('/dashboard')
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+    } catch {
+      setError('Passkey setup failed — try email instead')
     } finally {
       setLoading(false)
     }

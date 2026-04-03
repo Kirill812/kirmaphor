@@ -3,11 +3,14 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/api/helpers"
 	"github.com/kgory/kirmaphor/internal/auth"
@@ -366,9 +369,33 @@ func (h *AuthHandler) PasskeyLoginBegin(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		Email string `json:"email"`
 	}
-	if !helpers.Bind(w, r, &req) {
+	// Ignore parse errors — email is optional (discoverable login)
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	if req.Email == "" {
+		// Discoverable login: browser picks the passkey, no email needed
+		options, sessionData, err := h.wa.BeginDiscoverableLogin()
+		if err != nil {
+			helpers.WriteError(w, http.StatusInternalServerError, "webauthn error")
+			return
+		}
+		sessionIDBytes := make([]byte, 16)
+		if _, err := rand.Read(sessionIDBytes); err != nil {
+			helpers.WriteError(w, http.StatusInternalServerError, "server error")
+			return
+		}
+		sessionID := hex.EncodeToString(sessionIDBytes)
+		h.mu.Lock()
+		h.challenges["disc:"+sessionID] = &challengeEntry{data: sessionData, createdAt: time.Now()}
+		h.mu.Unlock()
+		helpers.WriteJSON(w, http.StatusOK, map[string]any{
+			"session_id": sessionID,
+			"options":    options,
+		})
 		return
 	}
+
+	// Email-based login
 	user, err := queries.GetUserByEmail(r.Context(), h.pool, req.Email)
 	if err != nil || user == nil {
 		helpers.WriteError(w, http.StatusBadRequest, "user not found")
@@ -398,48 +425,97 @@ func (h *AuthHandler) PasskeyLoginBegin(w http.ResponseWriter, r *http.Request) 
 	h.mu.Lock()
 	h.challenges[user.ID.String()] = &challengeEntry{data: sessionData, createdAt: time.Now()}
 	h.mu.Unlock()
-	helpers.WriteJSON(w, http.StatusOK, options)
+	helpers.WriteJSON(w, http.StatusOK, map[string]any{
+		"session_id": "",
+		"options":    options,
+	})
 }
 
 // POST /api/auth/passkey/login/finish
 func (h *AuthHandler) PasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		helpers.WriteError(w, http.StatusBadRequest, "email query param required")
-		return
-	}
-	user, err := queries.GetUserByEmail(r.Context(), h.pool, email)
-	if err != nil || user == nil {
-		helpers.WriteError(w, http.StatusUnauthorized, "invalid")
-		return
-	}
-	h.mu.Lock()
-	loginEntry := h.challenges[user.ID.String()]
-	h.mu.Unlock()
-	if loginEntry == nil {
-		helpers.WriteError(w, http.StatusBadRequest, "no pending login")
-		return
-	}
-	sessionData := loginEntry.data
-	dbCreds, _ := queries.GetPasskeyCredentialsByUserID(r.Context(), h.pool, user.ID)
-	waCreds := make([]webauthn.Credential, len(dbCreds))
-	for i, c := range dbCreds {
-		waCreds[i] = webauthn.Credential{
-			ID:        c.CredentialID,
-			PublicKey: c.PublicKey,
-			Authenticator: webauthn.Authenticator{SignCount: c.Counter},
+	sessionID := r.URL.Query().Get("session_id")
+	var user *models.User
+	var credential *webauthn.Credential
+
+	if sessionID != "" {
+		// Discoverable login path
+		h.mu.Lock()
+		entry := h.challenges["disc:"+sessionID]
+		h.mu.Unlock()
+		if entry == nil {
+			helpers.WriteError(w, http.StatusBadRequest, "no pending login")
+			return
 		}
-	}
-	wu := &webauthnUser{user: user, creds: waCreds}
-	credential, err := h.wa.FinishLogin(wu, *sessionData, r)
-	if err != nil {
-		helpers.WriteError(w, http.StatusUnauthorized, "passkey verification failed")
-		return
+		var err error
+		_, credential, err = h.wa.FinishPasskeyLogin(func(rawID, userHandle []byte) (webauthn.User, error) {
+			uid, parseErr := uuid.Parse(string(userHandle))
+			if parseErr != nil {
+				return nil, parseErr
+			}
+			u, dbErr := queries.GetUserByID(r.Context(), h.pool, uid)
+			if dbErr != nil || u == nil {
+				return nil, fmt.Errorf("user not found")
+			}
+			user = u
+			dbCreds, _ := queries.GetPasskeyCredentialsByUserID(r.Context(), h.pool, u.ID)
+			waCreds := make([]webauthn.Credential, len(dbCreds))
+			for i, c := range dbCreds {
+				waCreds[i] = webauthn.Credential{
+					ID:        c.CredentialID,
+					PublicKey: c.PublicKey,
+					Authenticator: webauthn.Authenticator{SignCount: c.Counter},
+				}
+			}
+			return &webauthnUser{user: u, creds: waCreds}, nil
+		}, *entry.data, r)
+		if err != nil {
+			helpers.WriteError(w, http.StatusUnauthorized, "passkey verification failed")
+			return
+		}
+		h.mu.Lock()
+		delete(h.challenges, "disc:"+sessionID)
+		h.mu.Unlock()
+	} else {
+		// Email-based login path
+		email := r.URL.Query().Get("email")
+		if email == "" {
+			helpers.WriteError(w, http.StatusBadRequest, "session_id or email required")
+			return
+		}
+		var err error
+		user, err = queries.GetUserByEmail(r.Context(), h.pool, email)
+		if err != nil || user == nil {
+			helpers.WriteError(w, http.StatusUnauthorized, "invalid")
+			return
+		}
+		h.mu.Lock()
+		loginEntry := h.challenges[user.ID.String()]
+		h.mu.Unlock()
+		if loginEntry == nil {
+			helpers.WriteError(w, http.StatusBadRequest, "no pending login")
+			return
+		}
+		sessionData := loginEntry.data
+		dbCreds, _ := queries.GetPasskeyCredentialsByUserID(r.Context(), h.pool, user.ID)
+		waCreds := make([]webauthn.Credential, len(dbCreds))
+		for i, c := range dbCreds {
+			waCreds[i] = webauthn.Credential{
+				ID:        c.CredentialID,
+				PublicKey: c.PublicKey,
+				Authenticator: webauthn.Authenticator{SignCount: c.Counter},
+			}
+		}
+		wu := &webauthnUser{user: user, creds: waCreds}
+		credential, err = h.wa.FinishLogin(wu, *sessionData, r)
+		if err != nil {
+			helpers.WriteError(w, http.StatusUnauthorized, "passkey verification failed")
+			return
+		}
+		h.mu.Lock()
+		delete(h.challenges, user.ID.String())
+		h.mu.Unlock()
 	}
 	_ = queries.UpdatePasskeyCounter(r.Context(), h.pool, credential.ID, credential.Authenticator.SignCount)
-	h.mu.Lock()
-	delete(h.challenges, user.ID.String())
-	h.mu.Unlock()
 
 	token, hash, err := queries.GenerateSessionToken()
 	if err != nil {

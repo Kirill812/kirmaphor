@@ -86,6 +86,15 @@ type webauthnUser struct {
 }
 
 func (u *webauthnUser) WebAuthnID() []byte                         { return []byte(u.user.ID.String()) }
+
+// discoverableWebauthnUser is used during discoverable login: WebAuthnID returns
+// the exact userHandle the browser stored at registration time (not the UUID).
+type discoverableWebauthnUser struct {
+	*webauthnUser
+	handle []byte
+}
+
+func (u *discoverableWebauthnUser) WebAuthnID() []byte { return u.handle }
 func (u *webauthnUser) WebAuthnName() string                       { return u.user.Email }
 func (u *webauthnUser) WebAuthnDisplayName() string                { return u.user.DisplayName }
 func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential { return u.creds }
@@ -469,7 +478,10 @@ func (h *AuthHandler) PasskeyLoginFinish(w http.ResponseWriter, r *http.Request)
 					Authenticator: webauthn.Authenticator{SignCount: c.Counter},
 				}
 			}
-			return &webauthnUser{user: u, creds: waCreds}, nil
+			return &discoverableWebauthnUser{
+				webauthnUser: &webauthnUser{user: u, creds: waCreds},
+				handle:       userHandle,
+			}, nil
 		}, *entry.data, r)
 		if err != nil {
 			log.Printf("FinishPasskeyLogin error: %v", err)

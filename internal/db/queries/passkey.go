@@ -45,6 +45,21 @@ func GetPasskeyCredentialsByUserID(ctx context.Context, pool *pgxpool.Pool, user
 	return creds, rows.Err()
 }
 
+// GetPasskeyCredentialByCredentialID looks up a credential by its raw credential ID bytes.
+// Used in discoverable login to find the user without requiring email.
+func GetPasskeyCredentialByCredentialID(ctx context.Context, pool *pgxpool.Pool, credID []byte) (*models.PasskeyCredential, error) {
+	c := &models.PasskeyCredential{}
+	err := pool.QueryRow(ctx,
+		`SELECT id, user_id, credential_id, public_key, counter, transports, device_name, last_used_at, created_at
+		 FROM passkey_credentials WHERE credential_id = $1`, credID,
+	).Scan(&c.ID, &c.UserID, &c.CredentialID, &c.PublicKey, &c.Counter,
+		&c.Transports, &c.DeviceName, &c.LastUsedAt, &c.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 func UpdatePasskeyCounter(ctx context.Context, pool *pgxpool.Pool, credID []byte, counter uint32) error {
 	_, err := pool.Exec(ctx,
 		`UPDATE passkey_credentials SET counter = $1, last_used_at = NOW() WHERE credential_id = $2`,

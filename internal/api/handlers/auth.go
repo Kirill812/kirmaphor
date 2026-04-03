@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kgory/kirmaphor/internal/api/helpers"
 	"github.com/kgory/kirmaphor/internal/auth"
@@ -448,11 +447,14 @@ func (h *AuthHandler) PasskeyLoginFinish(w http.ResponseWriter, r *http.Request)
 		}
 		var err error
 		_, credential, err = h.wa.FinishPasskeyLogin(func(rawID, userHandle []byte) (webauthn.User, error) {
-			uid, parseErr := uuid.Parse(string(userHandle))
-			if parseErr != nil {
-				return nil, parseErr
+			// Look up by credential ID (rawID), not userHandle.
+			// The userHandle was set during registration as a random tempID,
+			// not the user's UUID, so we can't rely on it for lookup.
+			dbCred, dbErr := queries.GetPasskeyCredentialByCredentialID(r.Context(), h.pool, rawID)
+			if dbErr != nil || dbCred == nil {
+				return nil, fmt.Errorf("credential not found")
 			}
-			u, dbErr := queries.GetUserByID(r.Context(), h.pool, uid)
+			u, dbErr := queries.GetUserByID(r.Context(), h.pool, dbCred.UserID)
 			if dbErr != nil || u == nil {
 				return nil, fmt.Errorf("user not found")
 			}

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-store'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import type { AuthUser } from '@/lib/auth-store'
+import { Fingerprint } from 'lucide-react'
 
 interface Props {
   onSwitchToEmail: () => void
@@ -44,16 +45,7 @@ export default function PasskeyLoginForm({ onSwitchToEmail }: Props) {
         className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-[filter] duration-150 hover:brightness-110 disabled:opacity-60"
         style={{ background: 'linear-gradient(135deg, #06b6d4, #0e7490)' }}
       >
-        {/* Fingerprint icon */}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>
-          <path d="M5 19.5C5.5 18 6 15 6 12c0-1.6.6-3.1 1.8-4.2"/>
-          <path d="M17.5 21C17 20 16 19 16 17c0-1.7-.5-3.3-1.5-4.5"/>
-          <path d="M22 12a10 10 0 0 1-2 6"/>
-          <path d="M9 12c0 1.7.5 3.3 1.5 4.5"/>
-          <path d="M12 7a5 5 0 0 1 5 5c0 3.5-1.5 6.5-4 8.5"/>
-          <path d="M12 7a5 5 0 0 0-5 5c0 1.5.2 3 .6 4.3"/>
-        </svg>
+        <Fingerprint size={20} strokeWidth={1.75} aria-hidden="true" />
         {loading ? 'Verifying…' : 'Sign in with Passkey'}
       </button>
 

@@ -151,3 +151,35 @@
 .animate-slide-in {
   animation: slide-in 200ms ease-out forwards;
 }
+
+/* Landing page */
+:root {
+  --land-bg:      #060A14;
+  --land-cyan:    #06b6d4;
+  --land-violet:  #818cf8;
+}
+
+@keyframes land-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1.0; }
+}
+
+@keyframes land-blink {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes land-reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-land-pulse  { animation: land-pulse 4s ease-in-out infinite; }
+.animate-land-blink  { animation: land-blink 1s step-end infinite; }
+.animate-land-reveal { animation: land-reveal 400ms ease-out forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-land-pulse,
+  .animate-land-blink,
+  .animate-land-reveal { animation: none; opacity: 1; transform: none; }
+}

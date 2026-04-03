@@ -183,3 +183,35 @@
   .animate-land-blink,
   .animate-land-reveal { animation: none; opacity: 1; transform: none; }
 }
+
+/* ── Dashboard Vibrant Pro design tokens ── */
+:root {
+  --dash-bg:         #0d0d1a;
+  --dash-surface:    rgba(99, 102, 241, 0.04);
+  --dash-border:     rgba(99, 102, 241, 0.10);
+  --dash-border-hi:  rgba(99, 102, 241, 0.25);
+
+  --dash-indigo:     #6366f1;
+  --dash-violet:     #8b5cf6;
+  --dash-gradient:   linear-gradient(135deg, #6366f1, #8b5cf6);
+
+  --dash-text:       #ffffff;
+  --dash-text-2:     rgba(255, 255, 255, 0.50);
+  --dash-text-3:     rgba(255, 255, 255, 0.25);
+
+  --dash-green:      #22c55e;
+  --dash-yellow:     #f59e0b;
+  --dash-red:        #ef4444;
+}
+
+@keyframes dash-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+  50%       { opacity: 0.6; box-shadow: 0 0 3px rgba(34, 197, 94, 0.3); }
+}
+.dash-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dash-green);
+  animation: dash-pulse 2s ease-in-out infinite;
+}

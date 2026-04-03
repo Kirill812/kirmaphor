@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { Topbar } from '@/components/layout/Topbar'
 
 function QuickStartCard({
@@ -16,26 +17,20 @@ function QuickStartCard({
   description: string
   href: string
 }) {
+  const [hovered, setHovered] = useState(false)
+
   return (
     <Link
       href={href}
       className="block rounded-xl transition-all duration-150"
       style={{
         padding: 14,
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: hovered ? 'rgba(99,102,241,0.05)' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${hovered ? 'rgba(99,102,241,0.30)' : 'rgba(255,255,255,0.06)'}`,
         textDecoration: 'none',
       }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,0.30)'
-        el.style.background = 'rgba(99,102,241,0.05)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(255,255,255,0.06)'
-        el.style.background = 'rgba(255,255,255,0.02)'
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div
         className="flex items-center justify-center rounded-lg"
@@ -60,6 +55,8 @@ export default function ProjectsPage() {
         title="Projects"
         actions={
           <button
+            type="button"
+            aria-label="Create new project"
             className="rounded-lg font-semibold text-white"
             style={{
               padding: '6px 14px',
@@ -116,6 +113,8 @@ export default function ProjectsPage() {
         {/* CTA */}
         <div className="flex flex-col items-center" style={{ gap: 10 }}>
           <button
+            type="button"
+            aria-label="Create new project"
             className="font-semibold text-white"
             style={{
               padding: '10px 28px',
@@ -131,13 +130,13 @@ export default function ProjectsPage() {
           </button>
           <div className="flex items-center" style={{ gap: 16 }}>
             <a
-              href="/docs"
+              href="#"
               style={{ fontSize: 12, color: 'rgba(99,102,241,0.7)', textDecoration: 'underline' }}
             >
               View examples
             </a>
             <a
-              href="/docs"
+              href="#"
               style={{ fontSize: 12, color: 'rgba(99,102,241,0.7)', textDecoration: 'underline' }}
             >
               Read the docs

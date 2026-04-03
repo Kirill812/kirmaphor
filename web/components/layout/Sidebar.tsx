@@ -10,7 +10,7 @@ import {
 import { useAuth } from '@/lib/auth-store'
 
 const NAV_MAIN = [
-  { href: '/projects',  label: 'Projects',   icon: FolderOpen, badge: 'count' as const },
+  { href: '/projects',  label: 'Projects',   icon: FolderOpen, badge: null },
   { href: '/runs',      label: 'Runs',        icon: Zap,        badge: 'live' as const },
   { href: '/templates', label: 'Templates',   icon: LayoutGrid, badge: null },
   { href: '/secrets',   label: 'Secrets',     icon: Lock,       badge: null },
@@ -53,7 +53,7 @@ export function Sidebar() {
         }}
       >
         <div
-          className="flex items-center gap-2 cursor-pointer rounded-lg"
+          className="flex items-center gap-2 rounded-lg"
           style={{
             padding: collapsed ? '6px' : '6px 8px',
             background: 'rgba(255,255,255,0.04)',
@@ -91,6 +91,7 @@ export function Sidebar() {
               key={href}
               href={href}
               className="flex items-center rounded-md relative"
+              aria-current={active ? 'page' : undefined}
               style={{
                 gap: collapsed ? 0 : 8,
                 padding: collapsed ? '7px 0' : '7px 8px',
@@ -154,6 +155,7 @@ export function Sidebar() {
               key={href}
               href={href}
               className="flex items-center rounded-md relative"
+              aria-current={active ? 'page' : undefined}
               style={{
                 gap: collapsed ? 0 : 8,
                 padding: collapsed ? '7px 0' : '7px 8px',
@@ -254,12 +256,17 @@ export function Sidebar() {
             {user?.display_name?.[0]?.toUpperCase() ?? '?'}
           </div>
           {!collapsed && (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: 'var(--dash-text)', fontWeight: 500 }}>
-                {user?.display_name}
+            <>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: 'var(--dash-text)', fontWeight: 500 }}>
+                  {user?.display_name}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--dash-text-3)' }}>Free plan</div>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--dash-text-3)' }}>Free plan</div>
-            </div>
+              <span style={{ fontSize: 11, color: 'var(--dash-text-3)', flexShrink: 0 }}>
+                Sign out
+              </span>
+            </>
           )}
         </div>
       </div>

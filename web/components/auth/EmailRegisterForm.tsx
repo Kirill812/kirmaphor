@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 import type { AuthUser } from '@/lib/auth-store'
 
 interface Props {
-  onSwitchToPasskey: () => void
+  onSwitchToPasskey?: () => void
 }
 
 const inputClass = `w-full h-11 rounded-lg px-3 text-white placeholder-gray-500 outline-none transition-[border-color,box-shadow] duration-150 border focus:border-cyan-500/50 focus:shadow-[0_0_0_3px_rgba(6,182,212,0.15)]`
@@ -100,13 +100,15 @@ export default function EmailRegisterForm({ onSwitchToPasskey }: Props) {
         {loading ? 'Creating account…' : 'Create account'}
       </button>
 
-      <button
-        type="button"
-        onClick={onSwitchToPasskey}
-        className="w-full text-sm text-gray-400 hover:text-white transition-colors duration-150 text-center"
-      >
-        ← Back to passkey
-      </button>
+      {onSwitchToPasskey && (
+        <button
+          type="button"
+          onClick={onSwitchToPasskey}
+          className="w-full text-sm text-gray-400 hover:text-white transition-colors duration-150 text-center"
+        >
+          ← Back to passkey
+        </button>
+      )}
     </form>
   )
 }

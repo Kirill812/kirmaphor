@@ -1,17 +1,8 @@
 // web/app/(auth)/register/page.tsx
-'use client'
-
-import { useState } from 'react'
 import Link from 'next/link'
-import PasskeyRegisterForm from '@/components/auth/PasskeyRegisterForm'
 import EmailRegisterForm from '@/components/auth/EmailRegisterForm'
-import AuthDivider from '@/components/auth/AuthDivider'
-
-type View = 'passkey' | 'email'
 
 export default function RegisterPage() {
-  const [view, setView] = useState<View>('passkey')
-
   return (
     <div className="space-y-6">
       {/* Heading */}
@@ -20,14 +11,7 @@ export default function RegisterPage() {
         <p className="text-sm text-gray-400">Start automating infrastructure today.</p>
       </div>
 
-      {view === 'passkey' ? (
-        <>
-          <PasskeyRegisterForm onSwitchToEmail={() => setView('email')} />
-          <AuthDivider />
-        </>
-      ) : (
-        <EmailRegisterForm onSwitchToPasskey={() => setView('passkey')} />
-      )}
+      <EmailRegisterForm />
 
       {/* Bottom link */}
       <p className="text-sm text-gray-400 text-center">
